@@ -1,10 +1,9 @@
 const {
   SY,
-  LP,
   YT,
+  LP,
+  LP2,
   MARKET_IFACE,
-  MULTICALL_CONTRACT,
-  LIQUID_LOCKERS,
   PENDLE_TREASURY,
   ZERO_ADDRESS,
 } = require("./consts");
@@ -24,7 +23,7 @@ function increaseUserAmount(result, user, amount) {
 
 function applySyHoldersShares(result, allBalances) {
   const balances = allBalances.filter(
-    (b) => b.token == SY && b.user != LP && b.user != YT
+    (b) => b.token == SY && b.user != LP && b.user != YT && b.user != LP2
   );
   for (const b of balances) {
     increaseUserAmount(result, b.user, BigNumber.from(b.balance));
@@ -39,7 +38,7 @@ function applyYtHolderShares(result, allBalances, allInterests, YTIndex) {
   for (const b of balances) {
     // result[b.user] = BigNumber.from(b.balance);
     const impliedBalance = BigNumber.from(b.balance).mul(_1E18).div(YTIndex);
-    
+
     const feeShare = impliedBalance.mul(3).div(100);
     const remainingBalance = impliedBalance.sub(feeShare);
 
@@ -53,9 +52,11 @@ function applyYtHolderShares(result, allBalances, allInterests, YTIndex) {
     if (i.user == YT || i.user == ZERO_ADDRESS) {
       continue;
     }
-    if (i.userIndex == '0') {
+    if (i.userIndex == "0") {
       if (YTBalances[i.user].gt(0)) {
-        throw new Error(`Pendle Fetcher: User ${i.user} has YT balance but no index`)
+        throw new Error(
+          `Pendle Fetcher: User ${i.user} has YT balance but no index`
+        );
       }
       continue;
     }
@@ -69,18 +70,24 @@ function applyYtHolderShares(result, allBalances, allInterests, YTIndex) {
   }
 }
 
-async function applyLpHolderShares(result, allBalances, blockNumber) {
+async function applyLpHolderShares(
+  result,
+  allBalances,
+  blockNumber,
+  lpToken,
+  liquidLockers
+) {
   const totalSyForLP = allBalances.filter(
-    (b) => b.token == SY && b.user == LP
+    (b) => b.token == SY && b.user == lpToken
   )[0].balance;
 
   const allLpHolders = allBalances
-    .filter((b) => b.token == LP)
+    .filter((b) => b.token == lpToken)
     .map((b) => b.user);
 
   const callDatas = allLpHolders.map((h) => {
     return {
-      target: LP,
+      target: lpToken,
       callData: MARKET_IFACE.encodeFunctionData("activeBalance", [h]),
     };
   });
@@ -94,7 +101,7 @@ async function applyLpHolderShares(result, allBalances, blockNumber) {
   );
 
   function processLiquidLocker(liquidLocker, totalBoostedSy) {
-    const receiptToken = LIQUID_LOCKERS.filter(
+    const receiptToken = liquidLockers.filter(
       (l) => l.address == liquidLocker
     )[0].receiptToken;
     const receiptTokenBalance = allBalances.filter(
@@ -116,6 +123,10 @@ async function applyLpHolderShares(result, allBalances, blockNumber) {
     }
   }
 
+  function isLiquidLocker(a) {
+    return liquidLockers.some((l) => l.address == a);
+  }
+
   for (let i = 0; i < allLpHolders.length; i++) {
     const holder = allLpHolders[i];
     const boostedSyBalance = allActiveBalances[i]
@@ -128,10 +139,6 @@ async function applyLpHolderShares(result, allBalances, blockNumber) {
       increaseUserAmount(result, holder, boostedSyBalance);
     }
   }
-}
-
-function isLiquidLocker(a) {
-  return LIQUID_LOCKERS.some((l) => l.address == a);
 }
 
 module.exports = {

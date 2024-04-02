@@ -4,6 +4,9 @@ const {
   USER_PENDING_INTEREST_QUERY,
   YT_INDEX_QUERY,
   PENDLE_TREASURY,
+  LIQUID_LOCKERS,
+  LP,
+  LP2,
 } = require("./consts");
 const {
   applyLpHolderShares,
@@ -43,7 +46,14 @@ async function fetchUserBalanceSnapshot(blockNumber) {
     allInterests,
     BigNumber.from(indexes[0].index)
   );
-  await applyLpHolderShares(result, allBalances, blockNumber);
+  await applyLpHolderShares(
+    result,
+    allBalances,
+    blockNumber,
+    LP,
+    LIQUID_LOCKERS
+  );
+  await applyLpHolderShares(result, allBalances, blockNumber, LP2, []);
 
   let sum = BigNumber.from(0);
   for (const user in result) {
@@ -53,9 +63,15 @@ async function fetchUserBalanceSnapshot(blockNumber) {
 }
 
 async function main() {
-  const BLOCK_NUMBER = 19310558;
-  const res = await fetchUserBalanceSnapshot(BLOCK_NUMBER);
-  console.log(res);
+  const USER = "0x9193f32b0995815c4ff4a0111d85cfd83bb05247";
+  for (let blk of [19565376]) {
+    const res = await fetchUserBalanceSnapshot(blk);
+    let sum = BigNumber.from(0);
+    for (const user in res) {
+      sum = sum.add(res[user]);
+    }
+    console.log(blk, res[USER].toString());
+  }
 }
 
 main()
