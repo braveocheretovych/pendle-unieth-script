@@ -1,6 +1,6 @@
 # Pendle BedRock Balance Tracking 
 
-Pendle system wraps `uniETH (Wrapped Bedrock UniETH)` into an ERC5115 token `SY`.
+Pendle system wraps `uniETH (Wrapped Bedrock UniETH)` into an [ERC5115](https://eips.ethereum.org/EIPS/eip-5115) token `SY`.
 
 `SY` can then be used in Pendle's system to:
 - Tokenize into `PT` and `YT`, where `YT` holders are entitled to all interests and rewards.
